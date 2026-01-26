@@ -25,7 +25,7 @@
 - 비디오 샘플링 정책은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
 
 
-# 1) 환경 설정
+### 1) 환경 설정
 ```bash
 conda create -n qwen3-vl python=3.10 -y
 conda activate qwen3-vl
@@ -35,12 +35,12 @@ conda activate qwen3-vl
 pip install -U vllm openai
 ```
 
-# 2) vLLM 서버 실행 (Qwen3-VL-30B-A3B-Thinking)
+### 2) vLLM 서버 실행 (Qwen3-VL-30B-A3B-Thinking)
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh
 ```
 
+### 3) Captioning 실행
 ```bash
-# 4) Captioning 실행
 python qwen3_captioning.py
 ```
