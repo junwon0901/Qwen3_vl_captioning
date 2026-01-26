@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-vllm serve Qwen/Qwen3-VL-2B-Instruct \
+vllm serve Qwen/Qwen3-VL-30B-A3B-Instruct \
   --tensor-parallel-size 1 \
   --mm-encoder-tp-mode data \
   --max-num-seqs 1 \
