@@ -2,7 +2,7 @@
 
 ## 1. 환경 설정
 - Conda 환경 생성 및 활성화
-- vLLM / openai 패키지 설치
+- vLLM 패키지 설치
 
 ## 2. vLLM 서버 실행 (Qwen3-VL-30B-A3B-Thinking)
 - Script: `qwen_serve.sh`
