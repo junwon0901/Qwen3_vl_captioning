@@ -1,5 +1,5 @@
 # Qwen3-VL Captioning Tool (vLLM)
-<sub>(Qwen3-VL-30B-A3B-Instruct)</sub>
+_(Qwen3-VL-30B-A3B-Instruct)_
 
 ## 1. 환경 설정
 - Conda 환경 생성 및 활성화
