@@ -13,6 +13,14 @@ conda activate qwen3-vl
 pip install -U vllm openai
 ```
 
+```bash
+cd ./qwen3_vl_captioning
+```
+
+```bash
+chmod +x ./qwen_serve.sh
+```
+
 ## 2. vLLM 서버 실행
 - Script: `qwen_serve.sh`
 - 서버 실행: `CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh`
