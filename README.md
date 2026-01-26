@@ -24,21 +24,23 @@
 - 서버 측 `--allowed-local-media-path`로 `file://...` 접근 가능한 로컬 경로가 제한됩니다.
 - 비디오 샘플링 정책은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
 
-```bash
+
 # 1) 환경 설정
+```bash
 conda create -n qwen3-vl python=3.10 -y
 conda activate qwen3-vl
+```
+
+```bash
 pip install -U vllm openai
+```
 
 # 2) vLLM 서버 실행 (Qwen3-VL-30B-A3B-Thinking)
+```bash
 CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh
+```
 
-# 3) (데이터 준비) 예시 디렉터리 구조
-# /home/dataset/video_eval/L1/{short,medium,long}/*.mp4
-# /home/dataset/video_eval/L2/{short,medium,long}/*.mp4
-# /home/dataset/video_eval/L3/{short,medium,long}/*.mp4
-# /home/dataset/video_eval/L4/{short,medium,long}/*.mp4
-# /home/dataset/video_eval/L5/{short,medium,long}/*.mp4
-
+```bash
 # 4) Captioning 실행
 python qwen3_captioning.py
+```
