@@ -1,10 +1,10 @@
-# Qwen3-VL Captioning Tool (vLLM)
+# Qwen3-VL Captioning Tool (vLLM / Qwen3-VL-30B-A3B-Instruct)
 
 ## 1. 환경 설정
 - Conda 환경 생성 및 활성화
 - vLLM 패키지 설치
 
-## 2. vLLM 서버 실행 (Qwen3-VL-30B-A3B-Thinking)
+## 2. vLLM 서버 실행
 - Script: `qwen_serve.sh`
 - 서버 실행: `CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh`
 - Hardware requirement (expected): RTX 4090 (24GB) × 4

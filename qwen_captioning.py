@@ -16,7 +16,7 @@ levels = ["L1", "L2", "L3", "L4", "L5"]
 durations = ["short", "medium", "long"]
 
 # Output file for captions
-output_file = "captions_qwen3-30B-A3B-thinking_.jsonl"
+output_file = "captions_qwen3-30B-A3B-Instruct.jsonl"
 
 # Load already processed videos
 processed_videos = set()
@@ -78,7 +78,7 @@ for level in levels:
             try:
                 start = time.time()
                 response = client.chat.completions.create(
-                    model="Qwen/Qwen3-VL-30B-A3B-Thinking",
+                    model="Qwen/Qwen3-VL-30B-A3B-Instruct",
                     messages=messages,
                     max_tokens=4096,
                 )
