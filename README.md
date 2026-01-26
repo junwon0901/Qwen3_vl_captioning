@@ -22,7 +22,7 @@
 
 ## Notes
 - 서버 측 `--allowed-local-media-path`로 `file://...` 접근 가능한 로컬 경로가 제한됩니다.
-- 비디오 샘플링 정책은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
+- 비디오 샘플링은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
 
 
 ### 1) 환경 설정
