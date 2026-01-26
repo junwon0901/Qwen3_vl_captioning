@@ -35,7 +35,7 @@ python qwen_captioning.py
 
 ## Notes
 - `qwen_captioning.py`는 아래 구조를 가정합니다:
-- `/home/dataset/video_eval/L{1..5}/{short,medium,long}/*.mp4`
+    - `/home/dataset/video_eval/L{1..5}/{short,medium,long}/*.mp4`
 
 - 서버 측 `--allowed-local-media-path`로 `file://...` 접근 가능한 로컬 경로가 제한됩니다.
 - 비디오 샘플링은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
