@@ -81,6 +81,9 @@ for level in levels:
                     model="Qwen/Qwen3-VL-30B-A3B-Instruct",
                     messages=messages,
                     max_tokens=4096,
+                    temperature=0,
+                    top_p=1,
+                    seed=42,
                 )
                 elapsed_time = time.time() - start
 
