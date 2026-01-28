@@ -14,10 +14,6 @@ pip install -U vllm openai
 ```
 
 ```bash
-cd ./qwen3_vl_captioning
-```
-
-```bash
 chmod +x ./qwen_serve.sh
 ```
 
