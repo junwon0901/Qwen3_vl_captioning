@@ -10,3 +10,4 @@ vllm serve Qwen/Qwen3-VL-30B-A3B-Instruct \
   --gpu-memory-utilization 0.80 \
   --allowed-local-media-path /home/dataset/video_eval \
   --media-io-kwargs '{"video":{"num_frames":2048,"fps":2}}' \
+  --seed 42
