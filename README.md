@@ -1,45 +1,33 @@
 # Qwen3-VL Captioning Tool (vLLM)
-* (Qwen3-VL-30B-A3B-Instruct)
+* (Qwen3-VL-8B-Instruct)
 
-## 1. 환경 설정
-- Conda 환경 생성 및 활성화
-- vLLM 패키지 설치
-```bash
-conda create -n qwen3-vl python=3.10 -y
-conda activate qwen3-vl
-```
-
-```bash
-pip install -U vllm openai
-```
-
-```bash
-chmod +x ./qwen_serve.sh
-```
-
-## 2. vLLM 서버 실행
-- Script: `qwen_serve.sh`
-- 서버 실행: `CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh`
-- Hardware requirement (expected): RTX 4090 (24GB) × 4
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 ./qwen_serve.sh
-```
-
-## 3. Captioning 실행
-- Script: `qwen_captioning.py`
-
-```bash
-python qwen_captioning.py
-```
-
-## 4. 출력
-- 출력은 JSONL 파일로 저장됩니다(1 line = 1 video).
-- 기존 output을 읽어 이미 처리된 `video_name`은 스킵하여 재개(resume)합니다.
+## 1. Environment Setup
+- Create and activate the Conda environment
+  ```bash
+  conda create -n qwen3-vl python=3.10 -y
+  conda activate qwen3-vl
+  ```
+- Install the vLLM package
+  ```bash
+  pip install -U vllm openai
+  ```
+## 2. Run the vLLM Server
+- Script: qwen_serve.sh
+- Run Server (Hardware requirement (expected): RTX 4090 (24GB) x 2)
+  ```bash
+  CUDA_VISIBLE_DEVICES=0,1 ./qwen_serve.sh
+  ```
+## 3. Run Captioning
+- Script: qwen_captioning.py
+  ```bash
+  python qwen_captioning.py
+  ```
+## 4. Output
+- Outputs are saved as a JSONL file (1 line = 1 video).
+- It reads the existing output and skips already-processed video_name entries to resume (resume).
 
 ## Notes
-- `qwen_captioning.py`는 아래 구조를 가정합니다:
-    - `/home/dataset/video_eval/L{1..5}/{short,medium,long}/*.mp4`
-
-- 서버 측 `--allowed-local-media-path`로 `file://...` 접근 가능한 로컬 경로가 제한됩니다.
-- 비디오 샘플링은 `qwen_serve.sh`의 `--media-io-kwargs` (예: `num_frames`, `fps`)에서 제어합니다.
+- qwen_captioning.py assumes the following structure:
+  - /home/dataset/video_eval/L{1..5}/{short,medium,long}/*.mp4
+- The server-side --allowed-local-media-path restricts local paths accessible via file://....
+- Video sampling is controlled by --media-io-kwargs in qwen_serve.sh (e.g., num_frames, fps).
