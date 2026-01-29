@@ -64,32 +64,34 @@ for idx, video_path in enumerate(video_entries, 1):
 
     print(f"\n[{idx}/{len(video_entries)}] Processing: {video_name}")
 
-            prompt_options = [
-                "Describe this video in detail, focusing on the spatio-temporal dynamics. Describe exactly how objects and agents move, change, and occupy space over time within the scene.",
-                "Give a detailed account of everything shown in the video, capturing all visible specifics. Describe events in the exact order they appear over time. Ensure that you describe the sequence of events exactly as they occur, without skipping any steps.",
-                "Describe the video in detail, paying special attention to how objects and people interact with each other. Capture the precise timing and nature of every contact, movement, and reaction shown in the footage.",
-                "Thoroughly describe the video’s visual narrative, capturing every visible detail from start to end. Emphasize how actions unfold and how the scene transitions logically over time.",
-                "Provide a detailed, continuous description of everything visible in the video. Describe only what is directly visible. Do not guess, assume, or add anything that is not clearly shown (e.g., implied audio, invisible causes, or future events)"
-            ]
-            selected_prompt = random.choice(prompt_options)
+    prompt_options = [
+        "Describe this video in detail, focusing on the spatio-temporal dynamics. Describe exactly how objects and agents move, change, and occupy space over time within the scene.",
+        "Give a detailed account of everything shown in the video, capturing all visible specifics. Describe events in the exact order they appear over time. Ensure that you describe the sequence of events exactly as they occur, without skipping any steps.",
+        "Describe the video in detail, paying special attention to how objects and people interact with each other. Capture the precise timing and nature of every contact, movement, and reaction shown in the footage.",
+        "Thoroughly describe the video’s visual narrative, capturing every visible detail from start to end. Emphasize how actions unfold and how the scene transitions logically over time.",
+        "Provide a detailed, continuous description of everything visible in the video. Describe only what is directly visible. Do not guess, assume, or add anything that is not clearly shown (e.g., implied audio, invisible causes, or future events)"
+    ]
+    selected_prompt_index = random.randrange(len(prompt_options))
+    selected_prompt = prompt_options[selected_prompt_index]
+    print(f"  Prompt selected: {selected_prompt_index + 1}")
 
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
+    messages = [
+        {
+            "role": "user",
+            "content": [
                 {
                     "type": "video_url",
                     "video_url": {
                         "url": video_url
                     },
-                        },
-                        {
-                            "type": "text",
-                            "text": selected_prompt,
-                        }
-                    ]
+                },
+                {
+                    "type": "text",
+                    "text": selected_prompt,
                 }
             ]
+        }
+    ]
 
     try:
         attempt = 0
