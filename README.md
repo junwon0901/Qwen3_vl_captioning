@@ -31,3 +31,4 @@
   - /home/dataset/video_eval/L{1..5}/{short,medium,long}/*.mp4
 - The server-side --allowed-local-media-path restricts local paths accessible via file://....
 - Video sampling is controlled by --media-io-kwargs in qwen_serve.sh (e.g., num_frames, fps).
+- For each video, the script randomly selects one of several prompt templates
