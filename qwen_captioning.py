@@ -1,39 +1,49 @@
 import time
 import json
 import random
+import os
 from pathlib import Path
-from openai import OpenAI
 
-client = OpenAI(
-    api_key="EMPTY",
-    base_url="http://localhost:8000/v1",
-    timeout=3600
-)
+# Force qwen-vl-utils to use decord before it is imported.
+os.environ["FORCE_QWENVL_VIDEO_READER"] = "decord"
+
+import torch
+from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
+from qwen_vl_utils import process_vision_info
+
+MODEL_ID = "Qwen/Qwen3-VL-32B-Instruct"
 
 base_dir = Path("/home/dataset/video_eval")
 video_index_file = base_dir / "VE-500.json"
 
-# Output file for captions
-output_file = "captions_qwen3-8B-instruct.jsonl"
-failed_file = "failed_video.json"
-max_retries_on_length = 1
+output_file = Path("captions_qwen3-32B-instruct.jsonl")
+failed_file = Path("failed_video.json")
 
-# Load already processed videos
+model = Qwen3VLForConditionalGeneration.from_pretrained(
+    MODEL_ID,
+    dtype="auto",
+    device_map="auto",
+)
+processor = AutoProcessor.from_pretrained(MODEL_ID)
+device = next(iter(model.parameters())).device
+
 processed_videos = set()
 captions_by_name = {}
-if Path(output_file).exists():
+if output_file.exists():
     with open(output_file, "r", encoding="utf-8") as f:
         for line in f:
-            if line.strip():
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
                 video_name = data.get("video_name")
                 caption = data.get("caption")
                 if video_name and caption is not None:
                     processed_videos.add(video_name)
                     captions_by_name[video_name] = caption
+            except json.JSONDecodeError:
+                continue
     print(f"Found {len(processed_videos)} already processed videos. Skipping them...")
 
 if not video_index_file.exists():
@@ -59,6 +69,14 @@ for video_path in video_entries:
         video_name = video_path.as_posix()
     ordered_video_names.append(video_name)
 
+prompt_options = [
+    "Describe this video in detail, focusing on the spatio-temporal dynamics. Describe exactly how objects and agents move, change, and occupy space over time within the scene.",
+    "Give a detailed account of everything shown in the video, capturing all visible specifics. Describe events in the exact order they appear over time. Ensure that you describe the sequence of events exactly as they occur, without skipping any steps.",
+    "Describe the video in detail, paying special attention to how objects and people interact with each other. Capture the precise timing and nature of every contact, movement, and reaction shown in the footage.",
+    "Thoroughly describe the video’s visual narrative, capturing every visible detail from start to end. Emphasize how actions unfold and how the scene transitions logically over time.",
+    "Provide a thorough description of every detail, explicitly prioritizing spatio-temporal dynamics. Capture all visual elements, and focus on their spatial positions, movement trajectories, and how the scene evolves over time."
+]
+
 def log_failed(video_name, reason):
     record = {
         "video_name": video_name,
@@ -68,8 +86,7 @@ def log_failed(video_name, reason):
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 def write_captions_ordered():
-    output_path = Path(output_file)
-    tmp_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    tmp_path = output_file.with_suffix(output_file.suffix + ".tmp")
     with open(tmp_path, "w", encoding="utf-8") as f:
         for name in ordered_video_names:
             caption = captions_by_name.get(name)
@@ -80,7 +97,100 @@ def write_captions_ordered():
                 "caption": caption,
             }
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
-    tmp_path.replace(output_path)
+    tmp_path.replace(output_file)
+
+def run_one_video(video_path: Path, video_name: str):
+    selected_prompt_index = random.randrange(len(prompt_options))
+    selected_prompt = prompt_options[selected_prompt_index]
+    print(f"  Prompt selected: {selected_prompt_index + 1}")
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "video",
+                    "video": str(video_path),
+                    "fps": 2,
+                    "max_frames": 2048,
+                },
+                {"type": "text", "text": selected_prompt},
+            ],
+        }
+    ]
+
+    start = time.time()
+
+    text = processor.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+
+    image_inputs, videos, video_kwargs = process_vision_info(
+        messages,
+        return_video_kwargs=True,
+        return_video_metadata=True,
+    )
+
+    if videos is not None:
+        videos, video_metadatas = zip(*videos)
+        videos = list(videos)
+        video_metadatas = list(video_metadatas)
+    else:
+        video_metadatas = None
+
+    inputs = processor(
+        text=[text],
+        images=image_inputs,
+        videos=videos,
+        video_metadata=video_metadatas,
+        padding=True,
+        return_tensors="pt",
+        **video_kwargs,
+    )
+
+    for k, v in inputs.items():
+        if isinstance(v, torch.Tensor):
+            inputs[k] = v.to(device)
+
+    with torch.no_grad():
+        generated_ids = model.generate(
+            **inputs,
+            max_new_tokens=4096,
+            do_sample=False,
+        )
+
+    elapsed_time = time.time() - start
+
+    prompt_len = inputs["input_ids"].shape[1]
+    gen_only_ids = generated_ids[:, prompt_len:]
+    caption = processor.batch_decode(gen_only_ids, skip_special_tokens=True)[0]
+
+    input_tokens = int(prompt_len)
+    output_tokens = int(gen_only_ids.shape[1])
+    total_tokens = input_tokens + output_tokens
+    print(f"  Input tokens: {input_tokens}, Output tokens: {output_tokens}, Total: {total_tokens}")
+
+    eos_token_id = model.generation_config.eos_token_id
+    if eos_token_id is None and hasattr(processor, "tokenizer"):
+        eos_token_id = processor.tokenizer.eos_token_id
+    gen_token_ids = gen_only_ids[0].tolist()
+    if isinstance(eos_token_id, (list, tuple, set)):
+        finished_with_stop = any(tok in eos_token_id for tok in gen_token_ids)
+    elif eos_token_id is None:
+        finished_with_stop = False
+    else:
+        finished_with_stop = eos_token_id in gen_token_ids
+    finish_reason = "stop" if finished_with_stop else "length"
+    if finish_reason == "length":
+        print("  Warning: Caption truncated due to max_new_tokens limit!")
+
+    captions_by_name[video_name] = caption
+    write_captions_ordered()
+
+    print(f"  Completed in {elapsed_time:.2f}s")
+    print(f"  Caption length: {len(caption)} characters")
+    print(f"  Finish reason: {finish_reason}")
 
 for idx, video_path in enumerate(video_entries, 1):
     try:
@@ -93,97 +203,18 @@ for idx, video_path in enumerate(video_entries, 1):
         log_failed(video_name, "missing_file")
         continue
 
-    # Skip if already processed
     if video_name in processed_videos:
         print(f"\n[{idx}/{len(video_entries)}] Skipping (already processed): {video_name}")
         continue
 
-    video_url = f"file://{video_path.absolute()}"
-
     print(f"\n[{idx}/{len(video_entries)}] Processing: {video_name}")
 
-    prompt_options = [
-        "Describe this video in detail, focusing on the spatio-temporal dynamics. Describe exactly how objects and agents move, change, and occupy space over time within the scene.",
-        "Give a detailed account of everything shown in the video, capturing all visible specifics. Describe events in the exact order they appear over time. Ensure that you describe the sequence of events exactly as they occur, without skipping any steps.",
-        "Describe the video in detail, paying special attention to how objects and people interact with each other. Capture the precise timing and nature of every contact, movement, and reaction shown in the footage.",
-        "Thoroughly describe the video’s visual narrative, capturing every visible detail from start to end. Emphasize how actions unfold and how the scene transitions logically over time.",
-        "Provide a detailed, continuous description of everything visible in the video. Describe only what is directly visible. Do not guess, assume, or add anything that is not clearly shown (e.g., implied audio, invisible causes, or future events)"
-    ]
-    selected_prompt_index = random.randrange(len(prompt_options))
-    selected_prompt = prompt_options[selected_prompt_index]
-    print(f"  Prompt selected: {selected_prompt_index + 1}")
-
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "video_url",
-                    "video_url": {
-                        "url": video_url
-                    },
-                },
-                {
-                    "type": "text",
-                    "text": selected_prompt,
-                }
-            ]
-        }
-    ]
-
     try:
-        attempt = 0
-        while True:
-            attempt += 1
-            start = time.time()
-            response = client.chat.completions.create(
-                model="Qwen/Qwen3-VL-8B-Instruct",
-                messages=messages,
-                max_tokens=1024,
-                temperature=0,
-                seed=42,
-            )
-            elapsed_time = time.time() - start
-
-            caption = response.choices[0].message.content
-            finish_reason = response.choices[0].finish_reason
-
-            usage = getattr(response, 'usage', None)
-            if usage:
-                input_tokens = getattr(usage, 'prompt_tokens', 0)
-                output_tokens = getattr(usage, 'completion_tokens', 0)
-                total_tokens = getattr(usage, 'total_tokens', 0)
-                print(f"  Input tokens: {input_tokens}, Output tokens: {output_tokens}, Total: {total_tokens}")
-
-            if finish_reason == "length":
-                print(f"  Warning: Caption truncated due to max_tokens limit! (retry {attempt}/{max_retries_on_length})")
-                if attempt < max_retries_on_length:
-                    continue
-                print(f"  Giving up after {max_retries_on_length} retries due to repeated length truncation.")
-                log_failed(video_name, "length_truncation_retries_exceeded")
-                break
-
-            if finish_reason == "length":
-                # Failed due to repeated length truncation; do not save caption
-                break
-
-            result = {
-                "video_name": video_name,
-                "caption": caption,
-            }
-
-            captions_by_name[video_name] = caption
-            write_captions_ordered()
-
-            print(f"  Completed in {elapsed_time:.2f}s")
-            print(f"  Caption length: {len(caption)} characters")
-            print(f"  Finish reason: {finish_reason}")
-            break
-
+        run_one_video(video_path, video_name)
+        processed_videos.add(video_name)
     except Exception as e:
-        error_msg = str(e)
-        print(f"  Error processing {video_name}: {error_msg}")
-        log_failed(video_name, error_msg)
+        print(f"  Error processing {video_name}: {e}")
+        log_failed(video_name, str(e))
         continue
 
 print(f"\nAll videos processed. Results saved to {output_file}")
