@@ -2,10 +2,13 @@ import time
 import json
 import random
 import os
+import io
+import contextlib
 from pathlib import Path
 
-# Force qwen-vl-utils to use decord before it is imported.
-os.environ["FORCE_QWENVL_VIDEO_READER"] = "decord"
+# Video URL compatibility depends on the backend library/version. You can override the
+# default backend by setting FORCE_QWENVL_VIDEO_READER to torchvision, decord, or torchcodec
+# before running this script.
 
 import torch
 from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
@@ -126,11 +129,17 @@ def run_one_video(video_path: Path, video_name: str):
         add_generation_prompt=True,
     )
 
-    image_inputs, videos, video_kwargs = process_vision_info(
-        messages,
-        return_video_kwargs=True,
-        return_video_metadata=True,
-    )
+    err_buf = io.StringIO()
+    with contextlib.redirect_stderr(err_buf):
+        image_inputs, videos, video_kwargs = process_vision_info(
+            messages,
+            return_video_kwargs=True,
+            return_video_metadata=True,
+        )
+    if "video_reader_backend decord error" in err_buf.getvalue():
+        print("  Decord failed; skipping this video.")
+        log_failed(video_name, "decord_error")
+        return False
 
     if videos is not None:
         videos, video_metadatas = zip(*videos)
@@ -191,6 +200,7 @@ def run_one_video(video_path: Path, video_name: str):
     print(f"  Completed in {elapsed_time:.2f}s")
     print(f"  Caption length: {len(caption)} characters")
     print(f"  Finish reason: {finish_reason}")
+    return True
 
 for idx, video_path in enumerate(video_entries, 1):
     try:
@@ -210,8 +220,9 @@ for idx, video_path in enumerate(video_entries, 1):
     print(f"\n[{idx}/{len(video_entries)}] Processing: {video_name}")
 
     try:
-        run_one_video(video_path, video_name)
-        processed_videos.add(video_name)
+        success = run_one_video(video_path, video_name)
+        if success:
+            processed_videos.add(video_name)
     except Exception as e:
         print(f"  Error processing {video_name}: {e}")
         log_failed(video_name, str(e))
