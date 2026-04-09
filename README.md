@@ -1,5 +1,5 @@
 # Qwen3-VL Captioning Tool (vLLM)
-* (Qwen3-VL-8B-Instruct)
+* (Qwen3-VL-32B-Instruct)
 
 ## 1. Environment Setup
 - Create and activate the Conda environment
@@ -13,9 +13,9 @@
   ```
 ## 2. Run the vLLM Server
 - Script: qwen_serve.sh
-- Run Server (Hardware requirement (expected): RTX 4090 (24GB) x 2)
+- Run Server (Hardware requirement (expected): RTX 4090 (24GB) x 4)
   ```bash
-  CUDA_VISIBLE_DEVICES=0,1 ./qwen_serve.sh
+  CUDA_VISIBLE_DEVICES=4,5,6,7 ./qwen_serve.sh
   ```
 ## 3. Run Captioning
 - Script: qwen_captioning.py
